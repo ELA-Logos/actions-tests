@@ -1,0 +1,103 @@
+name: "Tagging"
+description: ""
+inputs:
+  github_access_token:
+    description: "Github token"
+    required: true
+  version_file_location:
+    description: "Version file location"
+    default: "src/"
+  branch:
+    description: "Branch to push to"
+    default: "main"
+  no-push:
+    description: "Do not push to branch"
+    default: "false"
+  create-major-tag:
+    description: "Also create/overwrite a major tag to allways point to the latest version in any major version"
+    default: "false"
+  create-latest-tag:
+    description: "Also create/overwrite a latest tag to allways point to the latest version"
+    default: "false"
+
+outputs:
+  new_version:
+    description: "The new version"
+    value: ${{ steps.taggerDryRun.outputs.new_version }}
+  new_tag:
+    description: "The new tag"
+    value: ${{ steps.taggerDryRun.outputs.new_tag }}
+  commit_hash:
+    description: "The commit hash of the new commit (only available if no-push is false)"
+    value: ${{ steps.update_version_file.outputs.commit_hash }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Create SemVer Tag
+      id: taggerDryRun
+      uses: andylolz/github-tag-action@v6.2-208-conventionalcommits-preset.0
+      with: 
+        github_token: ${{ inputs.github_access_token }}
+        tag_prefix: "v"
+        dry_run: true
+
+    - name: Update version file
+      uses: Logos-Payment-Solution/update-version-file@v2.0.0
+      id: update_version_file
+      with:
+        version: ${{steps.taggerDryRun.outputs.new_version}}
+        version_file_location: ${{inputs.version_file_location}}
+        github_access_token: ${{ inputs.github_access_token }}
+        branch: ${{ inputs.branch }}
+        no-push: ${{ inputs.no-push }}
+
+    - name: Tag
+      if: inputs.no-push == 'false'
+      uses: andylolz/github-tag-action@v6.2-208-conventionalcommits-preset.0
+      with: 
+        github_token: ${{ inputs.github_access_token }}
+        tag_prefix: "v"
+        commit_sha: ${{ steps.update_version_file.outputs.commit_hash }}
+
+    - name: Determine Major Version
+      if: ${{ inputs.create-major-tag == 'true' && inputs.no-push == 'false' }}
+      id: majorVersion
+      shell: bash
+      run: |
+        echo "major_version=$(echo ${{ steps.taggerDryRun.outputs.new_version }} | cut -d. -f1)"
+
+    - name: Delete Major Tag
+      if: ${{ inputs.create-major-tag == 'true' && inputs.no-push == 'false' }}
+      shell: bash
+      run: |
+        if [ $(git tag -l "v${{ steps.majorVersion.outputs.major_version }}"]; then
+            git tag -d "${{ steps.majorVersion.outputs.major_version }}"
+            git push origin :refs/tags/v${{ steps.majorVersion.outputs.major_version }}
+        fi
+
+    - name: Create Major Tag
+      if: ${{ inputs.create-major-tag == 'true' && inputs.no-push == 'false' }}
+      uses: andylolz/github-tag-action@v6.2-208-conventionalcommits-preset.0
+      with:
+        github_token: ${{ inputs.github_access_token }}
+        tag_prefix: "v"
+        commit_sha: ${{ steps.update_version_file.outputs.commit_hash }}
+        custom_tag: ${{ steps.majorVersion.outputs.major_version }}
+
+    - name: Delete Latest tag
+      if: ${{ inputs.create-latest-tag == 'true' && inputs.no-push == 'false' }}
+      shell: bash
+      run: |
+        if [ $(git tag -l latest]; then
+          git tag -d latest
+          git push origin :refs/tags/latest
+        fi
+    - name: Create latest tag
+      if: ${{ inputs.create-latest-tag == 'true' && inputs.no-push == 'false' }}
+      uses: andylolz/github-tag-action@v6.2-208-conventionalcommits-preset.0
+      with:
+        github_token: ${{ inputs.github_access_token }}
+        tag_prefix: ""
+        commit_sha: ${{ steps.update_version_file.outputs.commit_hash }}
+        custom_tag: latest
