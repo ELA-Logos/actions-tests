@@ -71,7 +71,7 @@ runs:
       if: ${{ inputs.create-major-tag == 'true' && inputs.no-push == 'false' }}
       shell: bash
       run: |
-        if [ $(git tag -l "v${{ steps.majorVersion.outputs.major_version }}")]; then
+        if [ $(git tag -l "v${{ steps.majorVersion.outputs.major_version }}") ]; then
             git tag -d "v${{ steps.majorVersion.outputs.major_version }}"
             git push origin :refs/tags/v${{ steps.majorVersion.outputs.major_version }}
             git fetch --prune --tags
@@ -90,7 +90,7 @@ runs:
       if: ${{ inputs.create-latest-tag == 'true' && inputs.no-push == 'false' }}
       shell: bash
       run: |
-        if [ $(git tag -l latest)]; then
+        if [ $(git tag -l latest) ]; then
           git tag -d latest
           git push origin :refs/tags/latest
           git fetch --prune --tags
