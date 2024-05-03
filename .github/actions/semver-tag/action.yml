@@ -72,7 +72,7 @@ runs:
       shell: bash
       run: |
         if [ $(git tag -l "v${{ steps.majorVersion.outputs.major_version }}")]; then
-            git tag -d "${{ steps.majorVersion.outputs.major_version }}"
+            git tag -d "v${{ steps.majorVersion.outputs.major_version }}"
             git push origin :refs/tags/v${{ steps.majorVersion.outputs.major_version }}
             git fetch --prune --tags
         fi
