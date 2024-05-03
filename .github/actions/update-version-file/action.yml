@@ -1,0 +1,55 @@
+name: "Update version file"
+description: ""
+inputs:
+  version:
+    description: "Version to update with"
+    required: true
+  version_file_location:
+    description: "Version file location"
+    default: "src/"
+  branch:
+    description: "Branch to push to"
+    default: "main"
+  github_access_token:
+    description: "Push to protected branch"
+    required: true
+  no-push:
+    description: "Do not push to branch"
+    default: "false"
+  skip_ci:
+    description: "Skip CI"
+    default: "true"
+
+outputs:
+  commit_hash:
+    description: "The commit hash of the pushed commit"
+    value: ${{ steps.commit_push.outputs.commit_hash }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Update version files
+      shell: bash
+      run: |
+        if "${{ inputs.version_file_location }}" == '': 
+        then
+          python "${{ github.action_path }}/update_version_files.py" "${{ inputs.version }}"
+        else
+          python "${{ github.action_path }}/update_version_files.py" "${{ inputs.version }}" --path "${{ inputs.version_file_location }}"
+        fi
+        echo "New tag is: ${{ inputs.version }}"
+
+    - name: Create Commit message
+      id: create_commit_message
+      shell: bash
+      run: |
+        python "${{github.action_path}}/create_commit_message.py" "${{ inputs.version }}" --skip-ci "${{ inputs.skip_ci }}" >> "$GITHUB_ENV"
+
+    - name: Commit & Push changes
+      id: commit_push
+      if: inputs.no-push == 'false'
+      uses: stefanzweifel/git-auto-commit-action@v5
+      with:
+        branch: ${{ inputs.branch }}
+        commit_message: ${{ env.commit_message }}
+

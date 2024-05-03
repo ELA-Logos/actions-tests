@@ -43,7 +43,7 @@ runs:
         dry_run: true
 
     - name: Update version file
-      uses: Logos-Payment-Solution/update-version-file@v2.0.0
+      uses: ./.github/actions/update-version-file
       id: update_version_file
       with:
         version: ${{steps.taggerDryRun.outputs.new_version}}
