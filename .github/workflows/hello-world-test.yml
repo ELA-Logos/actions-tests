@@ -1,0 +1,5 @@
+on:
+  push:
+
+jobs:
+  uses: ELA-Logos/reusable-workflow-test/hello-world.yml@main
